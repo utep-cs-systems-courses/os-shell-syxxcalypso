@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-
-from os import read, write, execvpe, execve
-from sys import stdin, stdout
+import os
+import sys
 
 buf = ''
 _next = 0
@@ -15,9 +14,9 @@ def getchar():
     global _next
     global limit
 
-    if _next == limit:                       # First run, or limit reached
-        buf  += read(0, max_bytes).decode()  # Fill / add to buffer
-        limit = len(buf)                     # Get size of buffer
+    if _next == limit:                          # First run, or limit reached
+        buf  += os.read(0, max_bytes).decode()  # Fill / add to buffer
+        limit = len(buf)                        # Get size of buffer
 
         if limit == 0: # If read no chars
             return eof
@@ -49,8 +48,8 @@ def readline():
 def shell_loop(prompt='$ '.encode()):
     global eof # get global eof
 
-    write(1, prompt)          # Prompt
-    stdout.flush()
+    os.write(1, prompt)       # Prompt
+    sys.stdout.flush()
     line = readline()         # Get first line
     while line != eof:        # While line is valid
         if line == '\n':      # if line is empty
@@ -59,20 +58,20 @@ def shell_loop(prompt='$ '.encode()):
 
         line = line[:-1]   # Cut off the newline char
         run(tokenize(line))    # executes with the list returned from tokenize()
-        write(1, prompt)   # Prompt
-        stdout.flush()
+        os.write(1, prompt)   # Prompt
+        sys.stdout.flush()
         line = readline()  # get next line
 
 def tokenize(line):
     return line.split(' ')
 
 def run(tokens):
-    proc_id = fork()
+    proc_id = os.fork()
     if proc_id < 0:
-        write(2, "Fork has failed".encode())
+        os.write(2, "Fork has failed".encode())
         sys.exit(1)
     elif proc_id == 0:
-        execvpe(tokens[0], tokens, environ)
+        os.execvpe(tokens[0], tokens, os.environ)
     else:
         os.wait()
         return
