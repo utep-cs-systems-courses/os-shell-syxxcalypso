@@ -51,7 +51,7 @@ def shell_loop(prompt='$ '.encode()):
     os.write(1, prompt)       # Prompt
     sys.stdout.flush()
     line = readline()         # Get first line
-    while line != eof:        # While line is valid
+    while line != eof and line != 'exit\n':        # While line is valid
         if line != '\n':      # if line is empty
             line = line[:-1]   # Cut off the newline char
             run(tokenize(line))    # executes with the list returned from tokenize()
