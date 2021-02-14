@@ -58,10 +58,26 @@ def shell_loop(prompt='$ '.encode()):
             continue          # reset the while loop
 
         line = line[:-1]   # Cut off the newline char
-        print(':',line)    # echo
+        run(tokenize(line))    # executes with the list returned from tokenize()
         write(1, prompt)   # Prompt
         stdout.flush()
         line = readline()  # get next line
+
+def tokenize(line):
+    return line.split(' ')
+
+def run(tokens):
+    proc_id = fork()
+    if proc_id < 0:
+        write(2, "Fork has failed".encode())
+        sys.exit(1)
+    elif proc_id == 0:
+        execvpe(tokens[0], tokens, environ)
+    else:
+        os.wait()
+        return
+
+    
 
 if __name__ == '__main__':
     shell_loop()
