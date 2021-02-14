@@ -76,7 +76,6 @@ def run(tokens):
         return
 
 def get_env(tokens):
-    print(tokens[0])
     path_list = os.environ["PATH"].split(":")
     for path in path_list:
         if tokens[0] in os.listdir(path):
