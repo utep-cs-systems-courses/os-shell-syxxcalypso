@@ -52,12 +52,9 @@ def shell_loop(prompt='$ '.encode()):
     sys.stdout.flush()
     line = readline()         # Get first line
     while line != eof:        # While line is valid
-        if line == '\n':      # if line is empty
-            line = readline() # then get another line (reset the prompt)
-            continue          # reset the while loop
-
-        line = line[:-1]   # Cut off the newline char
-        run(tokenize(line))    # executes with the list returned from tokenize()
+        if line != '\n':      # if line is empty
+            line = line[:-1]   # Cut off the newline char
+            run(tokenize(line))    # executes with the list returned from tokenize()
         os.write(1, prompt)   # Prompt
         sys.stdout.flush()
         line = readline()  # get next line
