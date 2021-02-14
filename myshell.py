@@ -68,7 +68,9 @@ def run(tokens):
         os.write(2, "Fork has failed".encode())
         sys.exit(1)
     elif proc_id == 0:
-        os.execvpe(tokens[0], tokens, os.environ)
+        path = get_env(tokens)
+        if path:
+            os.execve(path, tokens, os.environ)
     else:
         os.wait()
         return
