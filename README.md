@@ -1,3 +1,6 @@
+## Collaborator
+Nick Sims
+
 ## Unix Shell
 
 Your goal for this lab is to build a user shell for a Unix operating
