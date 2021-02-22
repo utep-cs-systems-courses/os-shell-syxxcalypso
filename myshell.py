@@ -75,7 +75,6 @@ def super_tokenize(line, super_tokens=[]):
     return super_tokens + [tokenize(line)]
 
 def run(tokens):                                # run command
-
     if tokens[0] == 'cd':
         if len(tokens) > 2:
             os.write(1, 'cd: too many arguments\n')
