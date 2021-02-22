@@ -61,6 +61,17 @@ def tokenize(line):                             # tokenize function
     return line.split(' ')                      # returns tokenized string
 
 def run(tokens):                                # run command
+
+    if tokens[0] == 'cd':
+        if len(tokens) > 2:
+            os.write(1, 'cd: too many arguments\n')
+            return
+        if len(tokens) == 1:
+            os.chdir(os.environ['HOME'])
+            return
+        os.chdir(tokens[1])
+        return
+
     proc_id = os.fork()                         # starts new child shell
     if proc_id < 0:                             # check if valid fork
         os.write(2, "Fork has failed".encode()) # error message to STDERR
