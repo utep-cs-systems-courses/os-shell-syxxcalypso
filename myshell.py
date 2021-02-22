@@ -80,7 +80,7 @@ def get_env(tokens):                            # get envir path
     for path in path_list:                      # checks for path in the listdir()
         if tokens[0] in os.listdir(path):
             return path + '/' + tokens[0]       # path found, return with valid syntax
-    print("command not found " + tokens[0])     # prints error msg
+    os.write(1, "command not found " + tokens[0] + '\n')     # prints error msg
     return False
     
 
