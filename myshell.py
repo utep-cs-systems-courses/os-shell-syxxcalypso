@@ -58,7 +58,21 @@ def shell_loop(prompt='$ '.encode()):           # function for shell loop
         line = readline()                       # get next line
 
 def tokenize(line):                             # tokenize function
-    return line.split(' ')                      # returns tokenized string
+    tokens = line.split(' ')                    # tokenized string
+    while '' in tokens:
+        tokens.remove('')
+    return tokens
+
+def super_tokenize(line, super_tokens=[]):
+    special_chars = ['|', '<', '>']
+    for char in line:
+        if char in special_chars:
+            idx = line.index(char)
+            before = tokenize(line[:idx])
+            after = line[idx+1:]
+            super_tokens += [before, char]
+            return super_tokenize(after, super_tokens)
+    return super_tokens + [tokenize(line)]
 
 def run(tokens):                                # run command
 
