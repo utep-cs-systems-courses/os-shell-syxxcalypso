@@ -85,4 +85,8 @@ def get_env(tokens):                            # get envir path
     
 
 if __name__ == '__main__':
-    shell_loop()
+    PS1 = '$ '
+    if 'PS1' in os.environ:
+        PS1 = os.environ['PS1']
+
+    shell_loop(PS1.encode())
