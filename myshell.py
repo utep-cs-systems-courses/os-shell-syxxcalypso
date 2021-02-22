@@ -70,7 +70,9 @@ def run(tokens):                                # run command
         if path:                                # true = valid
             os.execve(path, tokens, os.environ) # execute command
     else:
-        os.wait()                               # wait for child to terminate
+        _proc_id, status = os.wait()                               # wait for child to terminate
+        if status:
+            os.write(1, f'{tokens[0]} failed with exit status {status}\n')
         return
 
 def get_env(tokens):                            # get envir path
