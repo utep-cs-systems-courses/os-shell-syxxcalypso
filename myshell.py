@@ -7,6 +7,7 @@ _next = 0
 limit = 0
 max_bytes = 1000
 eof = ''
+jobs = []
 
 def getchar():
     global eof                                  # Access globals
@@ -42,6 +43,16 @@ def readline():
     _next = 0                                   # reset next
     return tmp                                  # return the line
 
+def job_status():
+    global jobs
+
+    for proc_id in jobs:
+        try:
+            os.waitpid(proc_id, os.WNOHANG)
+            os.kill(proc_id, 0)
+        except OSError:
+            jobs.remove(proc_id)
+            os.write(1, f'{proc_id} has terminated\n'.encode())
 
 def shell_loop(prompt='$ '.encode()):           # function for shell loop
     global eof                                  # get global eof
@@ -50,6 +61,7 @@ def shell_loop(prompt='$ '.encode()):           # function for shell loop
     sys.stdout.flush()                          # flush since no '/n'
     line = readline()                           # Get first line
     while line != eof and line != 'exit\n':     # While line is valid
+        job_status()
         if line != '\n':                        # if line is empty
             line = line[:-1]                    # Cut off the newline char
             super_tokens = super_tokenize(line)
@@ -68,7 +80,7 @@ def tokenize(line):                             # tokenize function
 def super_tokenize(line, super_tokens=None):
     if not super_tokens:
         super_tokens = []
-    special_chars = ['|', '<', '>']
+    special_chars = ['|', '<', '>', '&']
     for char in line:
         if char in special_chars:
             idx = line.index(char)
@@ -76,11 +88,14 @@ def super_tokenize(line, super_tokens=None):
             after = line[idx+1:]
             super_tokens += [before, char]
             return super_tokenize(after, super_tokens)
-    return super_tokens + [tokenize(line)]
+    super_tokens += [tokenize(line)]
+    while [] in super_tokens:
+        super_tokens.remove([])
+    return super_tokens
 
 def preconfigure(tokens):
     'grep banana < test.txt | sed ///'
-    commands = [[token, []] if not token in ('|', '<', '>') else token for token in tokens]
+    commands = [[token, [], True] if not token in ('|', '<', '>', '&') else token for token in tokens]
     for token in tokens:
         if token == '|':
             idx = commands.index(token)
@@ -110,8 +125,12 @@ def preconfigure(tokens):
             command[1] += [(fd,0)]
             commands.pop(idx)
             commands.pop(idx)
+        elif token == '&':
+            idx = commands.index(token)
+            command = commands[idx - 1]
+            command[2] = False
 
-    commands = [token for token in commands if not token in ('|', '<', '>')]
+    commands = [token for token in commands if not token in ('|', '<', '>', '&')]
     return commands
 
 def run(commands):                                # run command
@@ -135,6 +154,7 @@ def run(commands):                                # run command
         return
 
 def exec(command):
+    global jobs
     proc_id = os.fork()                         # starts new child shell
     if proc_id < 0:                             # check if valid fork
         os.write(2, "Fork has failed".encode()) # error message to STDERR
@@ -152,9 +172,14 @@ def exec(command):
     for config in command[1]:
         os.close(config[0])
 
-    _proc_id, status = os.wait()                               # wait for child to terminate
-    if status:
-        os.write(1, f'{command[0]} failed with exit status {status}\n'.encode())
+    if command[2]: # if foreground mode
+        _proc_id, status = os.waitpid(proc_id, 0)                               # wait for child to terminate
+        if status:
+            os.write(1, f'{command[0]} failed with exit status {status}\n'.encode())
+        return
+
+    os.waitpid(proc_id, os.WNOHANG)
+    jobs += [proc_id]
 
 def get_env(tokens):                            # get envir path
     path_list = os.environ["PATH"].split(":")   # removes returned : to get valid path to return
