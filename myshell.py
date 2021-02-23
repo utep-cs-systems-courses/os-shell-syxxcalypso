@@ -52,7 +52,9 @@ def shell_loop(prompt='$ '.encode()):           # function for shell loop
     while line != eof and line != 'exit\n':     # While line is valid
         if line != '\n':                        # if line is empty
             line = line[:-1]                    # Cut off the newline char
-            run(tokenize(line))                 # executes with the list returned from tokenize()
+            super_tokens = super_tokenize(line)
+            commands = preconfigure(super_tokens)
+            run(commands)                 # executes with the list returned from tokenize()
         os.write(1, prompt)                     # Prompt
         sys.stdout.flush()                      # flush to guarantee write
         line = readline()                       # get next line
@@ -74,39 +76,73 @@ def super_tokenize(line, super_tokens=[]):
             return super_tokenize(after, super_tokens)
     return super_tokens + [tokenize(line)]
 
-def run(tokens):                                # run command
-    if tokens[0] == 'cd':
-        if len(tokens) > 2:
-            os.write(1, 'cd: too many arguments\n')
-            return
-        if len(tokens) == 1:
-            os.chdir(os.environ['HOME'])
-            return
-        os.chdir(tokens[1])
+def preconfigure(tokens):
+    tokens = [[token, []] if not token in ('|', '<', '>') else token for token in tokens]
+    for token in tokens:
+        if token == '|':
+            idx = tokens.index(token)
+            r, w = os.pipe()
+            os.set_inheritable(r, True)
+            os.set_inheritable(w, True)
+            before = tokens[idx - 1]
+            after = tokens[idx + 1]
+            before[1] += [(w,1)]
+            after[1] += [(r,0)]
+    commands = [token for token in tokens if not token in ('|', '<', '>')]
+    return commands
+
+def run(commands):                                # run command
+    for command in commands:
+
+        if get_env(command[0]):
+            exec(command)
+            continue
+
+        if command[0][0] == 'cd':
+            if len(command[0]) > 2:
+                os.write(1, 'cd: too many arguments\n')
+                return
+            if len(command[0]) == 1:
+                os.chdir(os.environ['HOME'])
+                return
+            os.chdir(command[0][1])
+            continue
+
+        os.write(1, "command not found " + tokens[0] + '\n')     # prints error msg
         return
 
+def exec(command):
     proc_id = os.fork()                         # starts new child shell
     if proc_id < 0:                             # check if valid fork
         os.write(2, "Fork has failed".encode()) # error message to STDERR
         sys.exit(1)
     elif proc_id == 0:
-        path = get_env(tokens)                  # path set to string path
-        if path:                                # true = valid
-            os.execve(path, tokens, os.environ) # execute command
-    else:
-        _proc_id, status = os.wait()                               # wait for child to terminate
-        if status:
-            os.write(1, f'{tokens[0]} failed with exit status {status}\n')
-        return
+        try:
+            path = get_env(command[0])
+            for args in command[1]:
+                os.dup2(*args)
+            os.execve(path, command[0], os.environ) # execute command
+        except OSError as error:
+            write(2, f'OSError: {error}\n')
+        sys.exit(1)
+
+    for config in command[1]:
+        os.close(config[0])
+
+    _proc_id, status = os.wait()                               # wait for child to terminate
+    if status:
+        os.write(1, f'{command[0]} failed with exit status {status}\n')
 
 def get_env(tokens):                            # get envir path
     path_list = os.environ["PATH"].split(":")   # removes returned : to get valid path to return
     for path in path_list:                      # checks for path in the listdir()
         if tokens[0] in os.listdir(path):
             return path + '/' + tokens[0]       # path found, return with valid syntax
-    os.write(1, "command not found " + tokens[0] + '\n')     # prints error msg
     return False
     
+
+
+
 
 if __name__ == '__main__':
     PS1 = '$ '
