@@ -154,7 +154,7 @@ def exec(command):
 
     _proc_id, status = os.wait()                               # wait for child to terminate
     if status:
-        os.write(1, f'{command[0]} failed with exit status {status}\n')
+        os.write(1, f'{command[0]} failed with exit status {status}\n'.encode())
 
 def get_env(tokens):                            # get envir path
     path_list = os.environ["PATH"].split(":")   # removes returned : to get valid path to return
