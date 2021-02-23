@@ -65,7 +65,9 @@ def tokenize(line):                             # tokenize function
         tokens.remove('')
     return tokens
 
-def super_tokenize(line, super_tokens=[]):
+def super_tokenize(line, super_tokens=None):
+    if not super_tokens:
+        super_tokens = []
     special_chars = ['|', '<', '>']
     for char in line:
         if char in special_chars:
@@ -77,18 +79,39 @@ def super_tokenize(line, super_tokens=[]):
     return super_tokens + [tokenize(line)]
 
 def preconfigure(tokens):
-    tokens = [[token, []] if not token in ('|', '<', '>') else token for token in tokens]
+    'grep banana < test.txt | sed ///'
+    commands = [[token, []] if not token in ('|', '<', '>') else token for token in tokens]
     for token in tokens:
         if token == '|':
-            idx = tokens.index(token)
+            idx = commands.index(token)
+            before = commands[idx - 1]
+            after = commands[idx + 1]
             r, w = os.pipe()
             os.set_inheritable(r, True)
             os.set_inheritable(w, True)
-            before = tokens[idx - 1]
-            after = tokens[idx + 1]
             before[1] += [(w,1)]
             after[1] += [(r,0)]
-    commands = [token for token in tokens if not token in ('|', '<', '>')]
+        elif token == '>':
+            idx = commands.index(token)
+            command = commands[idx - 1]
+            filename = commands[idx + 1][0][0]
+            fd = os.open(filename, os.O_WRONLY | os.O_CREAT, 0o644)
+            command[1] += [(fd,1)]
+            commands.pop(idx)
+            commands.pop(idx)
+        elif token == '<':
+            idx = commands.index(token)
+            command = commands[idx - 1]
+            filename = commands[idx + 1][0][0]
+            try:
+                fd = os.open(filename, os.O_RDONLY)
+            except FileNotFoundError as error:
+                os.write(2, f'File not found error: {error}\n')
+            command[1] += [(fd,0)]
+            commands.pop(idx)
+            commands.pop(idx)
+
+    commands = [token for token in commands if not token in ('|', '<', '>')]
     return commands
 
 def run(commands):                                # run command
